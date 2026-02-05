@@ -1,5 +1,75 @@
 # Assignment-3
-Output:-
+
+
+## Performance Summary
+
+| Kernel   | Time (ms) | Performance (TFLOPS) | Speedup vs Naive |
+|----------|-----------|----------------------|------------------|
+| Naive    | 275.62    | 0.50                 | 1x (baseline)    |
+|SMEM 1D   | 6.93      | 19.82                | 40x              |
+|2D Tiling | 5.29      | 25.99                | 52x              |
+|Vectorized| 5.27      | 26.10                | 52x              |
+|cuBLAS    | 2.65      | 51.92                | 104x             |
+
+---
+
+## Key Insights from Your Results
+
+### 1. **Naive → SMEM (40x speedup!)**
+- Went from 0.50 → 19.82 TFLOPS
+- **Why?** Shared memory tiling dramatically reduces global memory traffic
+- Each tile is loaded once from HBM but reused many times
+
+### 2. **SMEM → 2D Tiling (1.3x speedup)**
+- Went from 19.82 → 25.99 TFLOPS
+- **Why?** Better register usage with 2D thread block tiles
+- Each thread computes TM×TN results instead of just TM
+
+### 3. **2D Tiling → Vectorized (minimal improvement)**
+- Went from 25.99 → 26.10 TFLOPS
+- **Why?** float4 vectorized loads improve memory coalescing slightly
+- Already well-optimized, so gains are small
+
+### 4. **Custom → cuBLAS (2x speedup)**
+- Went from 26.10 → 51.92 TFLOPS
+- **Why?** NVIDIA uses:
+  - Tensor Cores (specialized matrix multiply hardware)
+  - Advanced tiling strategies
+  - Warp-level primitives
+  - Years of optimization
+
+---
+
+## Memory Hierarchy Impact
+
+Your results perfectly demonstrate the memory hierarchy optimization:
+
+```
+HBM (Global Memory)    →    SMEM (Shared Memory)    →    Registers
+     ~3 TB/s                    ~20 TB/s                 ~30+ TB/s
+     0.5 TFLOPS                 19.8 TFLOPS              26.1 TFLOPS
+```
+
+---
+
+## H100 Performance Analysis
+
+**Your cuBLAS achieved 51.92 TFLOPS**, which is:
+- ~5% of H100's theoretical peak FP32 (1000 TFLOPS)
+- This is actually **expected** because:
+  - FP32 matmul doesn't use Tensor Cores efficiently
+  - Tensor Cores are optimized for FP16/BF16/INT8
+  - With Tensor Cores (FP16), you'd see 200-400+ TFLOPS
+
+---
+
+## Cost Summary
+
+- **Time**: ~10 minutes
+- **Estimated cost**: ~$0.70-$1.00 on Modal H100
+
+
+###Output###:-
 PS C:\Users\khati\Documents\Ai\week3> python -m modal run cuda_matmul_complete.py
 ✓ Initialized. View run at https://modal.com/apps/khatiketki/main/ap-ruaOpPwuB6HNEXgmhK4M5h
 ✓ Created objects.                                                                                                    
